@@ -1,0 +1,168 @@
+@use "sass:color";
+@use "sass:map";
+
+/*$background-color: #001A23;
+$primary-color: #7A9E7E;
+$secondary-color: #31493C;
+$complementary-color: #E8F1F2; 
+$accent-color: #EF6461;
+
+.second-theme {
+  $background-color: yellow; //#0B2027;
+  $primary-color: #40798C;
+  $secondary-color: #70A9A1;
+  $complementary-color: #CFD7C7; 
+  $accent-color: #E57A44;
+}
+
+button {
+  background-color: $primary-color;
+  color: $complementary-color;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: color.adjust($secondary-color, $lightness: -10%);
+  }
+}
+
+a {
+  color: $accent-color;
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+body {
+  background-color: $background-color;
+  color: $complementary-color;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  .login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    .login-card {
+      background-color: $secondary-color;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      h1 {
+        display: flex;
+        justify-content: center;
+        font-size: 2rem;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      };
+    }
+  };
+}*/
+
+$themes: (
+  default: (
+    background-color: #001a23,
+    primary-color: #7a9e7e,
+    secondary-color: #31493c,
+    complementary-color: #e8f1f2,
+    accent-color: #ef6461,
+  ),
+  second: (
+    background-color: #0B2027,
+    primary-color: #70a9a1,
+    secondary-color: #40798c,
+    complementary-color: #cfd7c7,
+    accent-color: #e57a44,
+  )
+);
+
+@function theme-value($theme-name, $key) {
+  @return map.get(map.get($themes, $theme-name), $key);
+}
+
+@mixin theme-vars($theme-name) {
+  --background-color: #{theme-value($theme-name, background-color)};
+  --primary-color: #{theme-value($theme-name, primary-color)};
+  --secondary-color: #{theme-value($theme-name, secondary-color)};
+  --secondary-color-hover: #{color.adjust(theme-value($theme-name, secondary-color), $lightness: -10%)};
+  --complementary-color: #{theme-value($theme-name, complementary-color)};
+  --accent-color: #{theme-value($theme-name, accent-color)};
+}
+
+:root {
+  @include theme-vars(default);
+}
+
+body {
+  @include theme-vars(default);
+  background-color: var(--background-color);
+  color: var(--complementary-color);
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+
+  &.second-theme {
+    @include theme-vars(second);
+  }
+
+  .login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    .login-card {
+      background-color: var(--secondary-color);
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      h1 {
+        display: flex;
+        justify-content: center;
+        font-size: 2rem;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      };
+    }
+  };
+}
+
+button {
+  background-color: var(--primary-color);
+  color: var(--complementary-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: var(--secondary-color-hover);
+  }
+}
+
+a {
+  color: var(--accent-color);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+input {
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  background-color: var(--complementary-color);
+  color: var(--background-color);
+}
