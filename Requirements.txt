@@ -1,0 +1,19 @@
+Minimum viable requirements:
+- User login via email and password
+- User registration via email and password
+- Password reset via email
+- Calendar UI
+- Event creation and management (with starting and ending times)
+- Event Browsing on Calendar and dedicated day events view
+- Group creation and management
+- Group event scheduling, comparing among group members
+- Suggestions on available time for all group members
+- Hosting working build in firebase
+
+Nice to haves:
+- Only allow user registration with admin validation
+- Recurring events
+- Friends management (adding, removing, and viewing friends)
+- Notifications for upcoming events
+- Integration with external calendar services (e.g., Google Calendar)
+- Event reminders via email or push notifications

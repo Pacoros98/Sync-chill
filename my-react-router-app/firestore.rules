@@ -33,5 +33,150 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    match /usernames/{usernameLower} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() >= 1
+        && request.resource.data.userName.size() <= 30
+        && usernameLower == request.resource.data.userName.lower();
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      function isParticipant(data) {
+        return signedIn() && request.auth.uid in data.participantIds;
+      }
+
+      function hasValidEventShape(data) {
+        return data.ownerId is string
+          && data.title is string
+          && data.title.size() >= 1
+          && data.title.size() <= 200
+          && data.description is string
+          && data.startTime is timestamp
+          && data.endTime is timestamp
+          && data.endTime > data.startTime
+          && data.participantIds is list
+          && data.participantIds.size() >= 1
+          && (data.groupId == null || data.groupId is string);
+      }
+
+      function isValidGroupLink(data) {
+        return data.groupId == null
+          || (
+            exists(/databases/$(database)/documents/groups/$(data.groupId))
+            && request.auth.uid in get(/databases/$(database)/documents/groups/$(data.groupId)).data.memberIds
+            && data.participantIds == get(/databases/$(database)/documents/groups/$(data.groupId)).data.memberIds
+          );
+      }
+
+      allow read: if isParticipant(resource.data);
+
+      allow create: if isParticipant(request.resource.data)
+        && request.resource.data.ownerId == request.auth.uid
+        && hasValidEventShape(request.resource.data)
+        && isValidGroupLink(request.resource.data);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.ownerId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.participantIds == resource.data.participantIds
+        && request.resource.data.groupId == resource.data.groupId
+        && hasValidEventShape(request.resource.data);
+
+      allow delete: if signedIn() && request.auth.uid == resource.data.ownerId;
+    }
+
+    match /groups/{groupId} {
+      function isMember(data) {
+        return signedIn() && request.auth.uid in data.memberIds;
+      }
+
+      function hasValidGroupShape(data) {
+        return data.name is string
+          && data.name.size() >= 1
+          && data.name.size() <= 60
+          && data.ownerId is string
+          && data.memberIds is list
+          && data.memberIds.size() >= 1
+          && data.memberNames is map;
+      }
+
+      allow read: if isMember(resource.data);
+
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.auth.uid in request.resource.data.memberIds
+        && hasValidGroupShape(request.resource.data);
+
+      allow update: if signedIn() && (
+        (
+          request.auth.uid == resource.data.ownerId
+          && request.resource.data.ownerId == resource.data.ownerId
+          && hasValidGroupShape(request.resource.data)
+        )
+        || (
+          !(request.auth.uid in resource.data.memberIds)
+          && request.auth.uid in request.resource.data.memberIds
+          && request.resource.data.memberIds.removeAll([request.auth.uid]) == resource.data.memberIds
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.ownerId == resource.data.ownerId
+        )
+        || (
+          request.auth.uid in resource.data.memberIds
+          && !(request.auth.uid in request.resource.data.memberIds)
+          && resource.data.memberIds.removeAll([request.auth.uid]) == request.resource.data.memberIds
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.ownerId == resource.data.ownerId
+        )
+      );
+
+      allow delete: if signedIn() && request.auth.uid == resource.data.ownerId;
+
+      match /busy/{busyId} {
+        allow read: if isMember(get(/databases/$(database)/documents/groups/$(groupId)).data);
+
+        allow create, update: if isMember(get(/databases/$(database)/documents/groups/$(groupId)).data)
+          && request.auth.uid == request.resource.data.uid
+          && request.resource.data.startTime is timestamp
+          && request.resource.data.endTime is timestamp
+          && request.resource.data.endTime > request.resource.data.startTime;
+
+        allow delete: if isMember(get(/databases/$(database)/documents/groups/$(groupId)).data);
+      }
+    }
+
+    match /invites/{inviteId} {
+      function isGroupMember(groupId) {
+        return exists(/databases/$(database)/documents/groups/$(groupId))
+          && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+      }
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.toUserId || request.auth.uid == resource.data.invitedBy);
+
+      allow create: if signedIn()
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.groupId is string
+        && request.resource.data.toUserId is string
+        && isGroupMember(request.resource.data.groupId);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.toUserId
+        && resource.data.status == "pending"
+        && request.resource.data.status in ["accepted", "declined"]
+        && request.resource.data.groupId == resource.data.groupId
+        && request.resource.data.toUserId == resource.data.toUserId
+        && request.resource.data.invitedBy == resource.data.invitedBy;
+
+      allow delete: if signedIn() && request.auth.uid == resource.data.invitedBy;
+    }
   }
 }

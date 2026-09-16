@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type CalendarDay = {
   date: Date;
@@ -6,14 +6,30 @@ type CalendarDay = {
   isToday: boolean;
 };
 
+type MonthCalendarProps = {
+  visibleMonth: Date;
+  selectedDate: Date;
+  onVisibleMonthChange: (nextMonth: Date) => void;
+  onSelectDate: (nextDate: Date) => void;
+  eventCountByDate?: Map<string, number>;
+};
+
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function isSameDay(firstDate: Date, secondDate: Date) {
+export function isSameDay(firstDate: Date, secondDate: Date) {
   return (
     firstDate.getFullYear() === secondDate.getFullYear() &&
     firstDate.getMonth() === secondDate.getMonth() &&
     firstDate.getDate() === secondDate.getDate()
   );
+}
+
+// Key used to look up event counts per day, independent of time-of-day.
+export function dateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function buildCalendarDays(visibleMonth: Date): CalendarDay[] {
@@ -43,14 +59,13 @@ function buildCalendarDays(visibleMonth: Date): CalendarDay[] {
   return days;
 }
 
-export default function MonthCalendar() {
-  const today = new Date();
-
-  const [visibleMonth, setVisibleMonth] = useState(
-    () => new Date(today.getFullYear(), today.getMonth(), 1)
-  );
-  const [selectedDate, setSelectedDate] = useState(today);
-
+export default function MonthCalendar({
+  visibleMonth,
+  selectedDate,
+  onVisibleMonthChange,
+  onSelectDate,
+  eventCountByDate,
+}: MonthCalendarProps) {
   const calendarDays = useMemo(
     () => buildCalendarDays(visibleMonth),
     [visibleMonth]
@@ -61,33 +76,24 @@ export default function MonthCalendar() {
     year: "numeric",
   });
 
-  const selectedDateLabel = selectedDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
   const goToPreviousMonth = () => {
-    setVisibleMonth(
-      (currentMonth) =>
-        new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+    onVisibleMonthChange(
+      new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1)
     );
   };
 
   const goToNextMonth = () => {
-    setVisibleMonth(
-      (currentMonth) =>
-        new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    onVisibleMonthChange(
+      new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1)
     );
   };
 
   const goToToday = () => {
     const currentDate = new Date();
-    setVisibleMonth(
+    onVisibleMonthChange(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
     );
-    setSelectedDate(currentDate);
+    onSelectDate(currentDate);
   };
 
   return (
@@ -138,6 +144,7 @@ export default function MonthCalendar() {
       <div className="calendar-grid">
         {calendarDays.map((day) => {
           const isSelected = isSameDay(day.date, selectedDate);
+          const eventCount = eventCountByDate?.get(dateKey(day.date)) ?? 0;
 
           return (
             <button
@@ -151,37 +158,34 @@ export default function MonthCalendar() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              onClick={() => setSelectedDate(day.date)}
+              onClick={() => onSelectDate(day.date)}
             >
               <span className="calendar-day-number">{day.date.getDate()}</span>
+              {eventCount > 0 && (
+                <span
+                  className="calendar-day-indicator"
+                  aria-label={`${eventCount} event${eventCount === 1 ? "" : "s"}`}
+                >
+                  {eventCount > 9 ? "9+" : eventCount}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      <div className="calendar-footer">
-        <div className="selected-date-card">
-          <p className="selected-date-label">Selected date</p>
-          <h3>{selectedDateLabel}</h3>
-          <p>
-            This panel can later show events, availability, or proposed plans
-            for the selected day.
-          </p>
+      <div className="calendar-legend">
+        <div className="legend-item">
+          <span className="legend-swatch legend-swatch--today" />
+          <span>Today</span>
         </div>
-
-        <div className="calendar-legend">
-          <div className="legend-item">
-            <span className="legend-swatch legend-swatch--today" />
-            <span>Today</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-swatch legend-swatch--selected" />
-            <span>Selected date</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-swatch legend-swatch--muted" />
-            <span>Outside current month</span>
-          </div>
+        <div className="legend-item">
+          <span className="legend-swatch legend-swatch--selected" />
+          <span>Selected date</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-swatch legend-swatch--muted" />
+          <span>Outside current month</span>
         </div>
       </div>
     </section>

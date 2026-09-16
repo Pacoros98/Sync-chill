@@ -4,6 +4,7 @@ import { FirebaseError } from "firebase/app";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { Link, useNavigate } from "react-router";
 import { auth, db } from "../firebase";
+import { isUsernameTaken, reserveUsername } from "../lib/usernames";
 import "../styles/main.scss";
 
 export default function Signup() {
@@ -33,6 +34,11 @@ export default function Signup() {
 
     setLoading(true);
     try {
+      if (await isUsernameTaken(cleanUserName.toLowerCase())) {
+        setError("That user name is already taken.");
+        return;
+      }
+
       const credential = await createUserWithEmailAndPassword(auth, email, password);
 
       await updateProfile(credential.user, {
@@ -47,6 +53,8 @@ export default function Signup() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      await reserveUsername(credential.user.uid, cleanUserName);
 
       navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
